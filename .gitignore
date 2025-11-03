@@ -1,0 +1,34 @@
+# Autotools generated files
+aclocal.m4
+autom4te.cache/
+config.guess
+config.sub
+configure
+depcomp
+install-sh
+missing
+mkinstalldirs
+stamp-h?
+monitor_thing
+
+# Build artifacts
+*.o
+*.lo
+*.la
+*.so
+*.a
+*.pyc
+*.elc
+*.log
+*.core
+.deps/
+dirstamp
+Makefile.in
+Makefile
+
+# Editor/IDE specific files (example)
+.vscode/
+.idea/
+*~
+#*#
+.#*
