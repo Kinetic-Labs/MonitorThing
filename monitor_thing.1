@@ -6,7 +6,7 @@ monitor_thing \- system monitoring utility
 .RI [ OPTIONS ]
 .SH DESCRIPTION
 .B monitor_thing
-is a system monitoring utility that displays CPU usage statistics in real-time.
+is a system monitoring utility that displays system usage statistics in real-time.
 The utility continuously polls system metrics and displays them in a formatted table.
 .SH OPTIONS
 .TP
@@ -14,14 +14,14 @@ The utility continuously polls system metrics and displays them in a formatted t
 Display help message and exit.
 .TP
 .BR \-p ", " \-\-poll\-rate " " \fIRATE\fR
-Set the polling rate in seconds (default: 1).
-Valid range is 1 to 3600 seconds.
+Set the polling rate in miliseconds (default: 500).
+Valid range is 10 to 36000 miliseconds.
 .SH EXAMPLES
 .TP
-Monitor CPU with default 1 second polling:
+Monitor system with default 500 milisecond polling:
 .B monitor_thing
 .TP
-Monitor CPU with 5 second polling interval:
+Monitor system with 5000 second polling interval:
 .B monitor_thing \-p 5
 .TP
 Display help information:

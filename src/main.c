@@ -12,8 +12,8 @@
 #include <termios.h>
 #include <unistd.h>
 
-#define MAX_POLL_RATE 3600
-#define MIN_POLL_RATE 1
+#define MAX_POLL_RATE 36000
+#define MIN_POLL_RATE 10
 
 bool running = true;
 
@@ -51,6 +51,16 @@ int kbhit() {
 	return 0;
 }
 
+void check_quit() {
+	if(kbhit()) {
+		char the_char = getchar();
+
+		if(the_char == 'q') {
+			running = false;
+		}
+	}
+}
+
 void display_loop(const unsigned int poll_rate) {
 	mt_terminal_clear_screen();
 
@@ -58,36 +68,34 @@ void display_loop(const unsigned int poll_rate) {
 	printf("Starting in 1s...\n");
 	sleep(1);
 
-	const int HEADER_COUNT = 1;
-	char *headers[] = {"CPU"};
+	const int HEADER_COUNT = 2;
+	char *headers[] = {"CPU", "Memory"};
 	char row1_buffer[64] = {0};
-	char *row1[1] = {row1_buffer};
+	char row2_buffer[64] = {0};
+	char *row1[2] = {row1_buffer, row2_buffer};
 
 	while(running) {
 		mt_terminal_clear_screen();
 		float cpu_usage = mt_monitor_measure_cpu_usage();
+		float memory_usage = mt_monitor_measure_memory_usage_gb();
 
-		if(cpu_usage == 0.0) {
+		if(cpu_usage == 0.0 || memory_usage == 0.0) {
 			printf("Loading...\n");
 			msleep(500);
 			continue;
 		}
 
-		sprintf(row1_buffer, "CPU Usage: %.1f%%", cpu_usage);
+		sprintf(row1_buffer, "Usage: %.1f%%", cpu_usage);
+		sprintf(row2_buffer, "Usage: %.1f%%", cpu_usage);
+
 		mt_terminal_table_logger *logger = mt_terminal_table_logger_new(headers, HEADER_COUNT);
 		mt_terminal_table_logger_add_row(logger, row1, HEADER_COUNT);
 		mt_terminal_table_logger_log(logger);
 		mt_terminal_table_logger_free(logger);
 
-		if(kbhit()) {
-			char the_char = getchar();
-			if(the_char == 'q') {
-				running = false;
-				break;
-			}
-		}
+		check_quit();
 
-		sleep(poll_rate);
+		msleep(poll_rate);
 	}
 }
 
@@ -134,7 +142,7 @@ int parse_unsigned_int(const char *str, unsigned int *result) {
 
 int main(int argc, char **argv) {
 	signal(SIGINT, signal_handler);
-	unsigned int poll_rate = 1;
+	unsigned int poll_rate = 500; // ms
 
 	for(int i = 1; i < argc; i++) {
 		if(strncmp(argv[i], "-h", 3) == 0 || strncmp(argv[i], "--help", 7) == 0) {
@@ -154,7 +162,8 @@ int main(int argc, char **argv) {
 			}
 
 			if(poll_rate < MIN_POLL_RATE || poll_rate > MAX_POLL_RATE) {
-				fprintf(stderr, "Error: Poll rate must be between %d and %d seconds\n", MIN_POLL_RATE, MAX_POLL_RATE);
+				fprintf(stderr, "Error: Poll rate must be between %d and %d miliseconds\n", MIN_POLL_RATE,
+				        MAX_POLL_RATE);
 				return 1;
 			}
 		} else {
@@ -166,6 +175,8 @@ int main(int argc, char **argv) {
 
 	display_loop(poll_rate);
 	mt_terminal_clear_screen();
+
+	printf("Exiting...\n");
 
 	return 0;
 }
