@@ -10,6 +10,7 @@ missing
 mkinstalldirs
 stamp-h?
 monitor_thing
+.dirstamp
 
 # Build artifacts
 *.o
