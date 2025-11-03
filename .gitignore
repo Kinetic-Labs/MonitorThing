@@ -23,6 +23,7 @@ compile
 *.elc
 *.log
 *.core
+*.status
 .deps/
 dirstamp
 Makefile.in
