@@ -18,3 +18,4 @@ BreakBeforeTernaryOperators: true
 SortIncludes: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 1
+IndentCaseLabels: true

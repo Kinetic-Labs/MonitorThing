@@ -1,0 +1,45 @@
+.TH MONITOR_THING 1 "2025-11-02" "1.0" "User Commands"
+.SH NAME
+monitor_thing \- system monitoring utility
+.SH SYNOPSIS
+.B monitor_thing
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B monitor_thing
+is a system monitoring utility that displays CPU usage statistics in real-time.
+The utility continuously polls system metrics and displays them in a formatted table.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+.TP
+.BR \-p ", " \-\-poll\-rate " " \fIRATE\fR
+Set the polling rate in seconds (default: 1).
+Valid range is 1 to 3600 seconds.
+.SH EXAMPLES
+.TP
+Monitor CPU with default 1 second polling:
+.B monitor_thing
+.TP
+Monitor CPU with 5 second polling interval:
+.B monitor_thing \-p 5
+.TP
+Display help information:
+.B monitor_thing \-\-help
+.SH EXIT STATUS
+.TP
+.B 0
+Successful program execution or help displayed.
+.TP
+.B 1
+Error occurred (invalid arguments, out of range values, etc.).
+.SH SIGNALS
+.TP
+.B SIGINT
+Gracefully shut down the monitoring loop and exit.
+.SH AUTHOR
+Written by Kinetic Labs.
+.SH SEE ALSO
+.BR top (1),
+.BR htop (1),
+.BR vmstat (8)
