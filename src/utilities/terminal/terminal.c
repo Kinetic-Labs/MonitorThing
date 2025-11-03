@@ -18,7 +18,7 @@ static char *mt_terminal_strdup(const char *str) {
 	if(!str)
 		return NULL;
 
-	size_t len = strlen(str);
+	const size_t len = strlen(str);
 	char *dup = malloc(len + 1);
 
 	if(dup)
@@ -31,7 +31,7 @@ static size_t mt_terminal_max(size_t a, size_t b) {
 	return a > b ? a : b;
 }
 
-static void mt_terminal_string_array_init(mt_terminal_string_array *arr, size_t initial_capacity) {
+static void mt_terminal_string_array_init(mt_terminal_string_array *arr, const size_t initial_capacity) {
 	arr->data = malloc(initial_capacity * sizeof(char *));
 	arr->count = 0;
 	arr->capacity = initial_capacity;
@@ -47,13 +47,14 @@ static void mt_terminal_string_array_free(mt_terminal_string_array *arr) {
 	free(arr->data);
 }
 
-static void mt_terminal_row_array_init(mt_terminal_row_array *arr, size_t initial_capacity) {
+ // ReSharper disable once CppDFAConstantParameter
+static void mt_terminal_row_array_init(mt_terminal_row_array *arr, const size_t initial_capacity) {
 	arr->data = malloc(initial_capacity * sizeof(char **));
 	arr->count = 0;
 	arr->capacity = initial_capacity;
 }
 
-static void mt_terminal_row_array_free(mt_terminal_row_array *arr, size_t row_size) {
+static void mt_terminal_row_array_free(mt_terminal_row_array *arr, const size_t row_size) {
 	if(!arr || !arr->data)
 		return;
 
@@ -85,13 +86,19 @@ static void mt_terminal_size_array_free(mt_terminal_size_array *arr) {
 	free(arr->data);
 }
 
-static void mt_terminal_row_array_push(mt_terminal_row_array *arr, char **row) {
+static int mt_terminal_row_array_push(mt_terminal_row_array *arr, char **row) {
 	if(arr->count >= arr->capacity) {
-		arr->capacity *= 2;
-		arr->data = realloc(arr->data, arr->capacity * sizeof(char **));
+		const size_t new_capacity = arr->capacity * 2;
+		char ***new_data = realloc(arr->data, new_capacity * sizeof(char **));
+		if(!new_data)
+			return 0;
+
+		arr->data = new_data;
+		arr->capacity = new_capacity;
 	}
 
 	arr->data[arr->count++] = row;
+	return 1;
 }
 
 mt_terminal_table_logger *mt_terminal_table_logger_new(char **headers, size_t header_count) {
@@ -101,14 +108,35 @@ mt_terminal_table_logger *mt_terminal_table_logger_new(char **headers, size_t he
 		return NULL;
 
 	mt_terminal_string_array_init(&logger->headers, header_count);
+	if(header_count > 0 && !logger->headers.data) {
+		free(logger);
+		return NULL;
+	}
+
 	mt_terminal_row_array_init(&logger->rows, 16);
+	if(!logger->rows.data) {
+		mt_terminal_string_array_free(&logger->headers);
+		free(logger);
+		return NULL;
+	}
+
 	mt_terminal_size_array_init(&logger->column_widths, header_count);
+	if(header_count > 0 && !logger->column_widths.data) {
+		mt_terminal_row_array_free(&logger->rows, 0);
+		mt_terminal_string_array_free(&logger->headers);
+		free(logger);
+		return NULL;
+	}
 
 	for(size_t i = 0; i < header_count; i++) {
 		logger->headers.data[i] = mt_terminal_strdup(headers[i]);
+		if(!logger->headers.data[i] && headers[i]) {
+			mt_terminal_table_logger_free(logger);
+			return NULL;
+		}
 		logger->headers.count++;
 
-		size_t width = mt_terminal_strlen(headers[i]);
+		const size_t width = mt_terminal_strlen(headers[i]);
 		logger->column_widths.data[i] = width;
 		logger->column_widths.count++;
 	}
@@ -133,16 +161,34 @@ void mt_terminal_table_logger_add_row(mt_terminal_table_logger *logger, char **r
 	if(!logger || !row)
 		return;
 
-	for(size_t i = 0; i < row_size && i < logger->column_widths.count; i++) {
-		size_t cell_len = mt_terminal_strlen(row[i]);
+	const size_t num_columns = logger->headers.count;
+
+	for(size_t i = 0; i < row_size && i < num_columns; i++) {
+		const long unsigned int cell_len = mt_terminal_strlen(row[i]);
 		logger->column_widths.data[i] = mt_terminal_max(logger->column_widths.data[i], cell_len);
 	}
 
-	char **row_copy = malloc(row_size * sizeof(char *));
-	for(size_t i = 0; i < row_size; i++)
-		row_copy[i] = mt_terminal_strdup(row[i]);
+	char **row_copy = malloc(num_columns * sizeof(char *));
+	if(!row_copy)
+		return;
 
-	mt_terminal_row_array_push(&logger->rows, row_copy);
+	for(size_t i = 0; i < num_columns; i++) {
+		const char *cell_value = i < row_size ? row[i] : "";
+		row_copy[i] = mt_terminal_strdup(cell_value);
+
+		if(!row_copy[i] && cell_value) {
+			for(size_t j = 0; j < i; j++)
+				free(row_copy[j]);
+			free(row_copy);
+			return;
+		}
+	}
+
+	if(!mt_terminal_row_array_push(&logger->rows, row_copy)) {
+		for(size_t i = 0; i < num_columns; i++)
+			free(row_copy[i]);
+		free(row_copy);
+	}
 }
 
 void mt_terminal_table_logger_log(mt_terminal_table_logger *logger) {
@@ -176,10 +222,10 @@ void mt_terminal_table_logger_log(mt_terminal_table_logger *logger) {
 		printf("| ");
 		char **row = logger->rows.data[i];
 
-		size_t row_size = logger->headers.count;
+		const size_t row_size = logger->headers.count;
 
 		for(size_t j = 0; j < row_size; j++) {
-			size_t width = j < logger->column_widths.count ? logger->column_widths.data[j] : mt_terminal_strlen(row[j]);
+			const size_t width = j < logger->column_widths.count ? logger->column_widths.data[j] : mt_terminal_strlen(row[j]);
 			printf("%-*s | ", (int)width, row[j] ? row[j] : "");
 		}
 
@@ -205,20 +251,23 @@ char *mt_terminal_table_logger_to_string(const mt_terminal_table_logger *logger)
 
 	for(size_t i = 0; i < logger->rows.count; i++) {
 		char **row = logger->rows.data[i];
-		size_t row_size = logger->headers.count;
+		const size_t row_size = logger->headers.count;
 
 		while(pos + 512 > total_size) {
-			total_size *= 2;
-			output = realloc(output, total_size);
-
-			if(!output)
+			const size_t new_size = total_size * 2;
+			char *new_output = realloc(output, new_size);
+			if(!new_output) {
+				free(output);
 				return NULL;
+			}
+			output = new_output;
+			total_size = new_size;
 		}
 
 		pos += sprintf(output + pos, "| ");
 
 		for(size_t j = 0; j < row_size; j++) {
-			size_t width = j < logger->column_widths.count ? logger->column_widths.data[j] : mt_terminal_strlen(row[j]);
+			const size_t width = j < logger->column_widths.count ? logger->column_widths.data[j] : mt_terminal_strlen(row[j]);
 			pos += sprintf(output + pos, "%-*s | ", (int)width, row[j] ? row[j] : "");
 		}
 

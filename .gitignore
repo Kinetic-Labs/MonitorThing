@@ -25,10 +25,10 @@ compile
 *.core
 *.status
 .deps/
+build/
 dirstamp
 Makefile.in
 Makefile
-
 # Editor/IDE specific files (example)
 .vscode/
 .idea/

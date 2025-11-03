@@ -18,27 +18,21 @@
 bool running = true;
 
 void signal_handler(const int signum) {
-	switch(signum) {
-		case 2: {
-			printf("\nRecieved SIGINT, shutting down...\n");
-			running = false;
-		}
-	}
+	if(signum == SIGINT)
+		running = false;
 }
 
 int kbhit() {
 	struct termios oldt, newt;
-	int ch;
-	int oldf;
 
 	tcgetattr(STDIN_FILENO, &oldt);
 	newt = oldt;
 	newt.c_lflag &= ~(ICANON | ECHO);
 	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-	oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+	const int oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
 	fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-	ch = getchar();
+	const int ch = getchar();
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 	fcntl(STDIN_FILENO, F_SETFL, oldf);
@@ -53,7 +47,7 @@ int kbhit() {
 
 void check_quit() {
 	if(kbhit()) {
-		char the_char = getchar();
+		const char the_char = (char) getchar();
 
 		if(the_char == 'q') {
 			running = false;
@@ -68,16 +62,18 @@ void display_loop(const unsigned int poll_rate) {
 	printf("Starting in 1s...\n");
 	sleep(1);
 
-	const int HEADER_COUNT = 2;
 	char *headers[] = {"CPU", "Memory"};
 	char row1_buffer[64] = {0};
 	char row2_buffer[64] = {0};
 	char *row1[2] = {row1_buffer, row2_buffer};
 
+ // ReSharper disable once CppDFALoopConditionNotUpdated
 	while(running) {
+		const int HEADER_COUNT = 2;
+
 		mt_terminal_clear_screen();
-		float cpu_usage = mt_monitor_measure_cpu_usage();
-		float memory_usage = mt_monitor_measure_memory_usage_gb();
+		const float cpu_usage = mt_monitor_measure_cpu_usage();
+		const float memory_usage = mt_monitor_measure_memory_usage_gb();
 
 		if(cpu_usage == 0.0 || memory_usage == 0.0) {
 			printf("Loading...\n");
@@ -109,8 +105,7 @@ void show_help() {
 }
 
 int parse_unsigned_int(const char *str, unsigned int *result) {
-	char *endptr;
-	long val;
+	char *p_end;
 
 	if(str == NULL || *str == '\0') {
 		fprintf(stderr, "Error: Empty value provided\n");
@@ -118,19 +113,19 @@ int parse_unsigned_int(const char *str, unsigned int *result) {
 	}
 
 	errno = 0;
-	val = strtol(str, &endptr, 10);
+	const long val = strtol(str, &p_end, 10);
 
 	if(errno == ERANGE || val > UINT_MAX || val < 0) {
 		fprintf(stderr, "Error: Value out of range\n");
 		return 0;
 	}
 
-	if(endptr == str) {
+	if(p_end == str) {
 		fprintf(stderr, "Error: No digits found\n");
 		return 0;
 	}
 
-	if(*endptr != '\0') {
+	if(*p_end != '\0') {
 		fprintf(stderr, "Error: Invalid characters in value\n");
 		return 0;
 	}
@@ -140,7 +135,7 @@ int parse_unsigned_int(const char *str, unsigned int *result) {
 	return 1;
 }
 
-int main(int argc, char **argv) {
+int main(const int argc, char **argv) {
 	signal(SIGINT, signal_handler);
 	unsigned int poll_rate = 500; // ms
 
@@ -148,7 +143,9 @@ int main(int argc, char **argv) {
 		if(strncmp(argv[i], "-h", 3) == 0 || strncmp(argv[i], "--help", 7) == 0) {
 			show_help();
 			return 0;
-		} else if(strncmp(argv[i], "-p", 3) == 0 || strncmp(argv[i], "--poll-rate", 12) == 0) {
+		}
+
+		if(strncmp(argv[i], "-p", 3) == 0 || strncmp(argv[i], "--poll-rate", 12) == 0) {
 			i++;
 			if(i >= argc) {
 				fprintf(stderr, "Error: --poll-rate requires an argument\n");
