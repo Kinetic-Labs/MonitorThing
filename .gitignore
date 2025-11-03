@@ -1,4 +1,5 @@
 # Autotools generated files
+.dirstamp
 aclocal.m4
 autom4te.cache/
 config.guess
@@ -10,7 +11,7 @@ missing
 mkinstalldirs
 stamp-h?
 monitor_thing
-.dirstamp
+compile
 
 # Build artifacts
 *.o
